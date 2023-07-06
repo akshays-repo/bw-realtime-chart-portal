@@ -1,5 +1,4 @@
-
-import { useEffect, useState } from "react"
+import { useEffect, useState } from 'react';
 import { styled } from '@mui/material/styles';
 import Paper from '@mui/material/Paper';
 import Grid from '@mui/material/Grid';
@@ -16,10 +15,10 @@ import Toolbar from '@mui/material/Toolbar';
 import MenuIcon from '@mui/icons-material/Menu';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import {
-  Link
- } from "react-router-dom";
-
+import { toast } from 'react-toastify';
+import { useUrlStore } from './useUrlStore';
+import { useNavigate } from 'react-router-dom';
+import { MAX_DATA_POINTS } from '../../constants';
 
 const Item = styled(Paper)(({ theme }) => ({
   backgroundColor: theme.palette.mode === 'dark' ? '#1A2027' : '#fff',
@@ -27,143 +26,158 @@ const Item = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(1),
   textAlign: 'center',
   color: theme.palette.text.secondary,
-  height: "100%",
+  height: '100%',
 }));
 
-export interface SendingData {
-  x: number,
-  y: number,
-  z: number,
-  time: string,
-  name: string
+export interface SseResponse {
+  x: number;
+  y: number;
+  z: number;
+  time: string;
+  name: string;
 }
 
-export interface NewRealTImeData {
+export interface RealTimeGraph {
   [key: string]: {
-    x: number[],
-    y: number[],
-    z: number[],
-    label: string[]
-
-  }
+    x: number[];
+    y: number[];
+    // z: number[];
+    label: string[];
+  };
 }
-export type NewLabel = string[]
+export type Labels = string[];
 
-// type RealTimeDataOneKey = {
-//   [key: string]: SendingData;
-// };
+// TODO: CODE CLEAN UP IS NOT COMPLETED
 
-const MAX_DATA_POINTS = 50;
-
-const Stats = () => {
-  // const [realTimeDataOneKey, setRealTimDataOneKey] = useState<RealTimeDataOneKey>({})
-  const [newRealTImeData, setNewRealTimeData] = useState<NewRealTImeData>({})
-  const [url, setUrl] = useState('http://localhost:3001/sse');
+const Fft = () => {
+  const navigate = useNavigate();
+  const { url, newUrl, setUrl, setNewUrl } = useUrlStore((state) => state);
+  const [realTimeGraph, setRealTimeGraph] = useState<RealTimeGraph>({});
   const [sse, setSse] = useState<EventSource | null>(null);
+  const [anchorElMenu, setAnchorElMenu] = useState<null | HTMLElement>(null);
 
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const open = Boolean(anchorEl);
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
+  const openMenu = Boolean(anchorElMenu);
 
-  const startSSE = () => {
-    const newSse = new EventSource(url, { withCredentials: true });
-    newSse.onmessage = (e) => updateNewState(JSON.parse(e.data));
-    newSse.onerror = () => {
-      newSse.close();
+  useEffect(() => {
+    return () => {
+      handleCloseSSE();
     };
-    setSse(newSse);
+  }, []);
+
+  const handleUpdateRealTimeChartData = (data: SseResponse[]): void => {
+    setRealTimeGraph((prevRealTimeData) => {
+      const updatedRealTimeData = { ...prevRealTimeData };
+
+      for (const dataItem of data) {
+        const { name, x, y, time } = dataItem;
+
+        if (updatedRealTimeData[name]) {
+          // If the name already exists in newRealTimeData, update the data and time
+          // TODO: Need to refactor with out spread operator since its take large memory
+          updatedRealTimeData[name] = {
+            x: [...updatedRealTimeData[name].x, x],
+            y: [...updatedRealTimeData[name].y, y],
+            // z: [...updatedRealTimeData[name].z, z],
+            label: [...updatedRealTimeData[name].label, time],
+          };
+
+          if (updatedRealTimeData[name].x.length > MAX_DATA_POINTS) {
+            updatedRealTimeData[name] = {
+              x: [...updatedRealTimeData[name].x].slice(1),
+              y: [...updatedRealTimeData[name].y].slice(1),
+              // z: [...updatedRealTimeData[name].z].slice(1),
+              label: [...updatedRealTimeData[name].label].slice(1),
+            };
+          }
+        } else {
+          // If the name doesn't exist, create a new entry in newRealTimeData
+          updatedRealTimeData[name] = {
+            x: [x],
+            y: [y],
+            // z: [z],
+            label: [time],
+          };
+        }
+      }
+
+      return updatedRealTimeData;
+    });
   };
 
-  const closeSSE = () => {
+  const handleStartSSE = () => {
+    if (url !== newUrl) {
+      setUrl(newUrl);
+      setRealTimeGraph({});
+    }
+    try {
+      const newSse = new EventSource(newUrl, { withCredentials: true });
+      newSse.onmessage = (e) => handleUpdateRealTimeChartData(JSON.parse(e.data));
+      newSse.onerror = () => {
+        toast.error('Failed to connect');
+        newSse.close();
+      };
+      setSse(newSse);
+    } catch (error) {
+      toast.error('Failed to connect');
+    }
+  };
+
+  const handleCloseSSE = () => {
     if (sse) {
       sse.close();
       setSse(null);
     }
   };
 
-  useEffect(() => {
-    return () => {
-      closeSSE();
-    };
-  }, []);
-
-
-
-  const updateNewState = (data: SendingData[]) => {
-    setNewRealTimeData((prevRealTimeData) => {
-      const updatedRealTimeData = { ...prevRealTimeData };
-
-      for (const dataItem of data) {
-        const { name, x, y, z, time } = dataItem;
-
-        if (updatedRealTimeData[name]) {
-         // If the name already exists in newRealTimeData, update the data and time
-         updatedRealTimeData[name] = {
-          x: [...updatedRealTimeData[name].x , x],
-          y:[...updatedRealTimeData[name].y , y],
-          z: [...updatedRealTimeData[name].z , z],
-          label: [...updatedRealTimeData[name].label , time]
-        }
- 
-         if (updatedRealTimeData[name].x.length > MAX_DATA_POINTS) {
-          updatedRealTimeData[name] = {
-            x:[...updatedRealTimeData[name].x].slice(1),
-            y: [...updatedRealTimeData[name].y].slice(1),
-            z: [ ...updatedRealTimeData[name].z].slice(1),
-            label: [ ...updatedRealTimeData[name].label].slice(1)
-          }
-         }
-        } else {
-          // If the name doesn't exist, create a new entry in newRealTimeData
-          updatedRealTimeData[name] = {
-            x: [x],
-            y: [y],
-            z: [z],
-            label: [time]
-          }
-        }
-      }
-
-      return updatedRealTimeData;
-    })
-
-
-
-  }
-
-
-
-
   const handleClickStartCloseConnection = () => {
     if (sse) {
-      closeSSE()
+      handleCloseSSE();
     } else {
-      startSSE()
+      handleStartSSE();
     }
+  };
+
+  const handleClickMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorElMenu(event.currentTarget);
+  };
+
+  const handleCloseMenu = () => {
+    setAnchorElMenu(null);
+  };
+
+  const handleClickMenuOption = ()=>{
+    navigate('/sst');
   }
+
 
   return (
     <div>
-
       <Box sx={{ flexGrow: 1, marginBottom: '1rem' }}>
+        {/* TODO:Extract App bar in to separate component */}
         <AppBar color="transparent" position="static" elevation={1}>
           <Toolbar variant="dense">
-            <IconButton     id="basic-button"
-        aria-controls={open ? 'basic-menu' : undefined}
-        aria-haspopup="true"
-        aria-expanded={open ? 'true' : undefined}
-        onClick={handleClick} edge="start" color="inherit" aria-label="menu" sx={{ mr: 2 }}>
+            <IconButton
+              id="basic-button"
+              aria-controls={openMenu ? 'basic-menu' : undefined}
+              aria-haspopup="true"
+              aria-expanded={openMenu ? 'true' : undefined}
+              onClick={handleClickMenu}
+              edge="start"
+              color="inherit"
+              aria-label="menu"
+              sx={{ mr: 2 }}
+            >
               <MenuIcon />
             </IconButton>
-            <Grid container sx={{ paddingTop: "0.5rem", paddingBottom: "0.5rem" }} spacing={2} alignItems={"center"}>
-              <Grid item xs={3} display={"flex"} alignItems={"center"}>
-                <OutlinedInput color="info" disabled={Boolean(sse)} defaultValue={url} onChange={(e) => setUrl(e.target.value)}
-                  id="outlined-basic" size='small'
+            <Grid container sx={{ paddingTop: '0.5rem', paddingBottom: '0.5rem' }} spacing={2} alignItems={'center'}>
+              <Grid item xs={3} display={'flex'} alignItems={'center'}>
+                <OutlinedInput
+                  color="info"
+                  disabled={Boolean(sse)}
+                  defaultValue={url}
+                  onChange={(e) => setNewUrl(e.target.value)}
+                  id="outlined-basic"
+                  size="small"
                   endAdornment={
                     <InputAdornment position="end">
                       <IconButton
@@ -177,7 +191,7 @@ const Stats = () => {
                   }
                 />
               </Grid>
-              <Grid item xs={9} display={"flex"} alignItems={"center"} justifyContent={"space-evenly"}>
+              <Grid item xs={9} display={'flex'} alignItems={'center'} justifyContent={'space-evenly'}>
                 <Chip label="Current time RTC : Nan" variant="outlined" />
                 <Chip label="Current time PC : Nan" variant="outlined" />
                 <Chip label="odr : Nan" variant="outlined" />
@@ -188,35 +202,35 @@ const Stats = () => {
         </AppBar>
       </Box>
 
+      {sse === null && (
+        <Grid item display={'flex'} alignItems={'center'} justifyContent={'center'}>
+          <div> Please set up the router and click "Start"</div>
+        </Grid>
+      )}
 
-
-
-      <Grid container spacing={2} style={{ padding: '1rem' }} alignItems={"center"}>
-        {Object.keys(newRealTImeData).map((key) => <Grid key={key} item xs={6}>
-          <Item> <RealtimeChart name={key} label={newRealTImeData[key].label} data={newRealTImeData[key]} /></Item>
-        </Grid>)}
-
+      <Grid container spacing={2} style={{ padding: '1rem' }} alignItems={'center'}>
+        {Object.keys(realTimeGraph).map((key) => (
+          <Grid key={key} item xs={6}>
+            <Item>
+              <RealtimeChart name={key} label={realTimeGraph[key].label} data={realTimeGraph[key]} />
+            </Item>
+          </Grid>
+        ))}
       </Grid>
 
       <Menu
         id="basic-menu"
-        anchorEl={anchorEl}
-        open={open}
-        onClose={handleClose}
+        anchorEl={anchorElMenu}
+        open={openMenu}
+        onClose={handleCloseMenu}
         MenuListProps={{
           'aria-labelledby': 'basic-button',
         }}
       >
-        <MenuItem onClick={handleClose}>
-        <Link to={`/sst`}>          STATS
-</Link>
-
-        </MenuItem>
+        <MenuItem onClick={handleClickMenuOption}>SST</MenuItem>
       </Menu>
-
-
     </div>
-  )
-}
+  );
+};
 
-export default Stats
+export default Fft;

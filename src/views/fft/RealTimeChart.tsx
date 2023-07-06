@@ -8,88 +8,73 @@ import {
   Tooltip,
   Legend,
   ChartOptions,
-
 } from 'chart.js';
-import {  memo } from 'react';
+import { memo } from 'react';
 import { FC } from 'react';
 import { Line } from 'react-chartjs-2';
-import { NewLabel, } from '.';
+import { Labels } from '.';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-
-
-const options: ChartOptions<"line"> = {
+const options: ChartOptions<'line'> = {
   responsive: true,
   animation: {
-    easing: 'linear'
+    easing: 'linear',
   },
   scales: {
     x: {
-      display: true
+      display: true,
     },
     y: {
-      display: true
-    }
+      display: true,
+    },
   },
-    plugins: {
+  plugins: {
     legend: {
-      display: false
+      display: false,
     },
     title: {
       display: true,
-      position: 'bottom'
+      position: 'bottom',
     },
   },
 };
 
-
 interface Props {
-  name: string
-  data: { x: number[]; y: number[]; z: number[]; }
-  label: NewLabel
-
+  name: string;
+  data: { x: number[]; y: number[] };
+  label: Labels;
 }
 
-
-
-const RealTimeChart: FC<Props> = ({ name, data , label }) => {
+// eslint-disable-next-line react-refresh/only-export-components
+const RealTimeChart: FC<Props> = ({ name, data, label }) => {
   const chartData = {
-    labels:label ,
+    labels: label,
     datasets: [
       {
         label: 'X',
         data: data.x,
         fill: false,
         borderColor: 'red',
-        borderWidth: 1
+        borderWidth: 1,
       },
       {
         label: 'Y',
         data: data.y,
         fill: false,
         borderColor: 'green',
-        borderWidth: 1
-      }
+        borderWidth: 1,
+      },
     ],
   };
 
+  return (
+    <div>
+      {name}
+      <Line id={name} width={'100%'} height={'98%'} options={options} data={chartData} />
+    </div>
+  );
+};
 
-  
-  return <div>{name} <Line  id={name} width={"100%"} height={"90%"} options={options} data={chartData} /></div>;
-}
-
-
-
-
-
-
-export default memo(RealTimeChart)
+// eslint-disable-next-line react-refresh/only-export-components
+export default memo(RealTimeChart);

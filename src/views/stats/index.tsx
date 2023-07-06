@@ -58,10 +58,6 @@ const Stats = () => {
 
   const openMenu = Boolean(anchorElMenu);
 
-
-
-
-
   useEffect(() => {
     return () => {
       handleCloseSSE();
@@ -147,8 +143,12 @@ const Stats = () => {
 
   const handleCloseMenu = () => {
     setAnchorElMenu(null);
-    navigate('/fft');
   };
+
+  const handleClickMenuOption = ()=>{
+    navigate('/fft');
+
+  }
 
   return (
     <div>
@@ -227,7 +227,7 @@ const Stats = () => {
           'aria-labelledby': 'basic-button',
         }}
       >
-        <MenuItem onClick={handleCloseMenu}>FFT</MenuItem>
+        <MenuItem onClick={handleClickMenuOption}>FFT</MenuItem>
       </Menu>
     </div>
   );
