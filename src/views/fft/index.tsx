@@ -72,14 +72,14 @@ const Fft = () => {
       const fft: FftGraph[] = [];
 
       for (let fftIndex = 0; fftIndex < fft_x.length; fftIndex++) {
-        rowData.push({
+        fft.push({
           x: fft_x[fftIndex],
           y: fft_y[fftIndex],
         });
       }
 
       for (let rowDataIndex = 0; rowDataIndex < raw_data_x.length; rowDataIndex++) {
-        fft.push({
+        rowData.push({
           x: raw_data_x[rowDataIndex],
           y: raw_data_y[rowDataIndex],
         });

@@ -33,7 +33,7 @@ const options: ChartOptions<'line'> = {
       fullSize: false,
     },
     title: {
-      display: true,
+      display: false,
       position: 'bottom',
     },
   },
