@@ -12,26 +12,25 @@ import {
 import { memo } from 'react';
 import { FC } from 'react';
 import { Line } from 'react-chartjs-2';
-import { Labels } from '.';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 const options: ChartOptions<'line'> = {
   responsive: true,
-  animation: {
-    easing: 'linear',
-  },
   scales: {
-    x: {
-      display: true,
-    },
     y: {
-      display: true,
+      type: 'linear',
+      beginAtZero: false,
+    },
+    x: {
+      type: 'linear',
+      beginAtZero: false,
     },
   },
   plugins: {
     legend: {
-      display: false,
+      display: true,
+      fullSize: false,
     },
     title: {
       display: true,
@@ -39,31 +38,29 @@ const options: ChartOptions<'line'> = {
     },
   },
 };
-
+interface FftGraph {
+  x: number;
+  y: number;
+}
 interface Props {
   name: string;
-  data: { x: number[]; y: number[] };
-  label: Labels;
+  data: { rawData: FftGraph[]; fft: FftGraph[] };
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
-const RealTimeChart: FC<Props> = ({ name, data, label }) => {
+const RealTimeChart: FC<Props> = ({ name, data }) => {
   const chartData = {
-    labels: label,
+    // labels: label,
     datasets: [
       {
-        label: 'X',
-        data: data.x,
-        fill: false,
+        label: 'Raw Data',
+        data: data.rawData,
         borderColor: 'red',
-        borderWidth: 1,
       },
       {
-        label: 'Y',
-        data: data.y,
-        fill: false,
-        borderColor: 'green',
-        borderWidth: 1,
+        label: 'FFT',
+        data: data.fft,
+        borderColor: 'blue',
       },
     ],
   };
@@ -71,7 +68,7 @@ const RealTimeChart: FC<Props> = ({ name, data, label }) => {
   return (
     <div>
       {name}
-      <Line id={name} width={'100%'} height={'98%'} options={options} data={chartData} />
+      <Line id={name} width={'100%'} height={'80%'} options={options} data={chartData} />
     </div>
   );
 };

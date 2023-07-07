@@ -5,10 +5,6 @@ import Grid from '@mui/material/Grid';
 import { Chip } from '@mui/material';
 import RealtimeChart from './RealTimeChart';
 import IconButton from '@mui/material/IconButton';
-import OutlinedInput from '@mui/material/OutlinedInput';
-import InputAdornment from '@mui/material/InputAdornment';
-import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
-import StopIcon from '@mui/icons-material/Stop';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
@@ -18,7 +14,8 @@ import MenuItem from '@mui/material/MenuItem';
 import { toast } from 'react-toastify';
 import { useUrlStore } from './useUrlStore';
 import { useNavigate } from 'react-router-dom';
-import { MAX_DATA_POINTS } from '../../constants';
+import RouterInputBox from '../../components/RouterInput';
+import useMetaDataSEE from '../../hooks/useMetaDataSEE';
 
 const Item = styled(Paper)(({ theme }) => ({
   backgroundColor: theme.palette.mode === 'dark' ? '#1A2027' : '#fff',
@@ -30,22 +27,24 @@ const Item = styled(Paper)(({ theme }) => ({
 }));
 
 export interface SseResponse {
-  x: number;
-  y: number;
-  z: number;
-  time: string;
+  raw_data_x: number[];
+  raw_data_y: number[];
+  fft_x: number[];
+  fft_y: number[];
   name: string;
 }
 
+interface FftGraph {
+  x: number;
+  y: number;
+}
 export interface RealTimeGraph {
   [key: string]: {
-    x: number[];
-    y: number[];
-    // z: number[];
-    label: string[];
+    rawData: FftGraph[];
+    fft: FftGraph[];
   };
 }
-export type Labels = string[];
+export type Labels = number[];
 
 // TODO: CODE CLEAN UP IS NOT COMPLETED
 
@@ -55,7 +54,7 @@ const Fft = () => {
   const [realTimeGraph, setRealTimeGraph] = useState<RealTimeGraph>({});
   const [sse, setSse] = useState<EventSource | null>(null);
   const [anchorElMenu, setAnchorElMenu] = useState<null | HTMLElement>(null);
-
+  const { metaData, handleCloseMetaSSE, handleStartMetaSSE } = useMetaDataSEE({ url, newUrl });
   const openMenu = Boolean(anchorElMenu);
 
   useEffect(() => {
@@ -64,42 +63,31 @@ const Fft = () => {
     };
   }, []);
 
-  const handleUpdateRealTimeChartData = (data: SseResponse[]): void => {
+  const handleUpdateRealTimeChartData = (data: SseResponse): void => {
     setRealTimeGraph((prevRealTimeData) => {
       const updatedRealTimeData = { ...prevRealTimeData };
+      const { name, fft_x, raw_data_x, fft_y, raw_data_y } = data;
 
-      for (const dataItem of data) {
-        const { name, x, y, time } = dataItem;
+      const rowData: FftGraph[] = [];
+      const fft: FftGraph[] = [];
 
-        if (updatedRealTimeData[name]) {
-          // If the name already exists in newRealTimeData, update the data and time
-          // TODO: Need to refactor with out spread operator since its take large memory
-          updatedRealTimeData[name] = {
-            x: [...updatedRealTimeData[name].x, x],
-            y: [...updatedRealTimeData[name].y, y],
-            // z: [...updatedRealTimeData[name].z, z],
-            label: [...updatedRealTimeData[name].label, time],
-          };
-
-          if (updatedRealTimeData[name].x.length > MAX_DATA_POINTS) {
-            updatedRealTimeData[name] = {
-              x: [...updatedRealTimeData[name].x].slice(1),
-              y: [...updatedRealTimeData[name].y].slice(1),
-              // z: [...updatedRealTimeData[name].z].slice(1),
-              label: [...updatedRealTimeData[name].label].slice(1),
-            };
-          }
-        } else {
-          // If the name doesn't exist, create a new entry in newRealTimeData
-          updatedRealTimeData[name] = {
-            x: [x],
-            y: [y],
-            // z: [z],
-            label: [time],
-          };
-        }
+      for (let fftIndex = 0; fftIndex < fft_x.length; fftIndex++) {
+        rowData.push({
+          x: fft_x[fftIndex],
+          y: fft_y[fftIndex],
+        });
       }
 
+      for (let rowDataIndex = 0; rowDataIndex < raw_data_x.length; rowDataIndex++) {
+        fft.push({
+          x: raw_data_x[rowDataIndex],
+          y: raw_data_y[rowDataIndex],
+        });
+      }
+      updatedRealTimeData[name] = {
+        rawData: rowData,
+        fft: fft,
+      };
       return updatedRealTimeData;
     });
   };
@@ -132,8 +120,10 @@ const Fft = () => {
   const handleClickStartCloseConnection = () => {
     if (sse) {
       handleCloseSSE();
+      handleCloseMetaSSE();
     } else {
       handleStartSSE();
+      handleStartMetaSSE()
     }
   };
 
@@ -145,11 +135,11 @@ const Fft = () => {
     setAnchorElMenu(null);
   };
 
-  const handleClickMenuOption = ()=>{
+  const handleClickMenuOption = () => {
     navigate('/sst');
-  }
+  };
 
-
+  
   return (
     <div>
       <Box sx={{ flexGrow: 1, marginBottom: '1rem' }}>
@@ -171,38 +161,29 @@ const Fft = () => {
             </IconButton>
             <Grid container sx={{ paddingTop: '0.5rem', paddingBottom: '0.5rem' }} spacing={2} alignItems={'center'}>
               <Grid item xs={3} display={'flex'} alignItems={'center'}>
-                <OutlinedInput
-                  color="info"
-                  disabled={Boolean(sse)}
-                  defaultValue={url}
-                  onChange={(e) => setNewUrl(e.target.value)}
-                  id="outlined-basic"
-                  size="small"
-                  endAdornment={
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle password visibility"
-                        onClick={handleClickStartCloseConnection}
-                        edge="end"
-                      >
-                        {!sse ? <PlayCircleOutlineIcon color="success" /> : <StopIcon color="warning" />}
-                      </IconButton>
-                    </InputAdornment>
-                  }
+                <RouterInputBox
+                  color={'info'}
+                  url={url}
+                  onChangeUrl={(e) => setNewUrl(e)}
+                  onClickStartCloseConnection={() => {
+                    handleClickStartCloseConnection();
+                  }}
+                  sse={Boolean(sse)}
                 />
               </Grid>
               <Grid item xs={9} display={'flex'} alignItems={'center'} justifyContent={'space-evenly'}>
-                <Chip label="Current time RTC : Nan" variant="outlined" />
-                <Chip label="Current time PC : Nan" variant="outlined" />
-                <Chip label="odr : Nan" variant="outlined" />
-                <Chip label="Battery : Nan" variant="outlined" />
+                <Chip color='info' label={`TIME RTC : ${metaData?.time_rtc}`} variant="outlined" />
+                <Chip color='info' label={`TIME PC : ${metaData?.time_pc}`} variant="outlined" />
+                <Chip color='info' label={`Battery : ${metaData?.battery}`} variant="outlined" />
+                <Chip color='info' label={`ODR : ${metaData?.odr}`} variant="outlined" />
+                <Chip color='info' label={`PC - RTC : ${metaData?.diff}`} variant="outlined" />
               </Grid>
             </Grid>
           </Toolbar>
         </AppBar>
       </Box>
 
-      {sse === null && (
+      {sse === null && !realTimeGraph && (
         <Grid item display={'flex'} alignItems={'center'} justifyContent={'center'}>
           <div> Please set up the router and click "Start"</div>
         </Grid>
@@ -212,7 +193,7 @@ const Fft = () => {
         {Object.keys(realTimeGraph).map((key) => (
           <Grid key={key} item xs={6}>
             <Item>
-              <RealtimeChart name={key} label={realTimeGraph[key].label} data={realTimeGraph[key]} />
+              <RealtimeChart name={key} data={realTimeGraph[key]} />
             </Item>
           </Grid>
         ))}

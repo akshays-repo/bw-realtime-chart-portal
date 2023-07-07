@@ -5,10 +5,6 @@ import Grid from '@mui/material/Grid';
 import { Chip } from '@mui/material';
 import RealtimeChart from './RealTimeChart';
 import IconButton from '@mui/material/IconButton';
-import OutlinedInput from '@mui/material/OutlinedInput';
-import InputAdornment from '@mui/material/InputAdornment';
-import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
-import StopIcon from '@mui/icons-material/Stop';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
@@ -19,6 +15,8 @@ import { toast } from 'react-toastify';
 import { useUrlStore } from './useUrlStore';
 import { useNavigate } from 'react-router-dom';
 import { MAX_DATA_POINTS } from '../../constants';
+import RouterInputBox from '../../components/RouterInput';
+import useMetaDataSEE from '../../hooks/useMetaDataSEE';
 
 const Item = styled(Paper)(({ theme }) => ({
   backgroundColor: theme.palette.mode === 'dark' ? '#1A2027' : '#fff',
@@ -55,6 +53,7 @@ const Stats = () => {
   const [realTimeGraph, setRealTimeGraph] = useState<RealTimeGraph>({});
   const [sse, setSse] = useState<EventSource | null>(null);
   const [anchorElMenu, setAnchorElMenu] = useState<null | HTMLElement>(null);
+  const { metaData, handleCloseMetaSSE, handleStartMetaSSE } = useMetaDataSEE({ url, newUrl });
 
   const openMenu = Boolean(anchorElMenu);
 
@@ -132,8 +131,10 @@ const Stats = () => {
   const handleClickStartCloseConnection = () => {
     if (sse) {
       handleCloseSSE();
+      handleCloseMetaSSE()
     } else {
       handleStartSSE();
+      handleStartMetaSSE()
     }
   };
 
@@ -145,10 +146,9 @@ const Stats = () => {
     setAnchorElMenu(null);
   };
 
-  const handleClickMenuOption = ()=>{
+  const handleClickMenuOption = () => {
     navigate('/fft');
-
-  }
+  };
 
   return (
     <div>
@@ -171,38 +171,29 @@ const Stats = () => {
             </IconButton>
             <Grid container sx={{ paddingTop: '0.5rem', paddingBottom: '0.5rem' }} spacing={2} alignItems={'center'}>
               <Grid item xs={3} display={'flex'} alignItems={'center'}>
-                <OutlinedInput
-                  color="info"
-                  disabled={Boolean(sse)}
-                  defaultValue={url}
-                  onChange={(e) => setNewUrl(e.target.value)}
-                  id="outlined-basic"
-                  size="small"
-                  endAdornment={
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle password visibility"
-                        onClick={handleClickStartCloseConnection}
-                        edge="end"
-                      >
-                        {!sse ? <PlayCircleOutlineIcon color="success" /> : <StopIcon color="warning" />}
-                      </IconButton>
-                    </InputAdornment>
-                  }
+                <RouterInputBox
+                  color={'info'}
+                  url={url}
+                  onChangeUrl={(e) => setNewUrl(e)}
+                  onClickStartCloseConnection={() => {
+                    handleClickStartCloseConnection();
+                  }}
+                  sse={Boolean(sse)}
                 />
               </Grid>
               <Grid item xs={9} display={'flex'} alignItems={'center'} justifyContent={'space-evenly'}>
-                <Chip label="Current time RTC : Nan" variant="outlined" />
-                <Chip label="Current time PC : Nan" variant="outlined" />
-                <Chip label="odr : Nan" variant="outlined" />
-                <Chip label="Battery : Nan" variant="outlined" />
+              <Chip color='info' label={`TIME RTC : ${metaData?.time_rtc || 'Nill'}`} variant="outlined" />
+                <Chip size='small' color='info' label={`TIME PC : ${metaData?.time_pc || 'Nill'}`} variant="outlined" />
+                <Chip color='info' label={`Battery : ${metaData?.battery || 'Nill'}`} variant="outlined" />
+                <Chip color='info' label={`ODR : ${metaData?.odr || 'Nill'}`} variant="outlined" />
+                <Chip color='info' label={`PC - RTC : ${metaData?.diff || 'Nill'}`} variant="outlined" />
               </Grid>
             </Grid>
           </Toolbar>
         </AppBar>
       </Box>
 
-      {sse === null && (
+      {sse === null && !realTimeGraph && (
         <Grid item display={'flex'} alignItems={'center'} justifyContent={'center'}>
           <div> Please set up the router and click "Start"</div>
         </Grid>
