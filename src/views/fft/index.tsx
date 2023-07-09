@@ -172,11 +172,11 @@ const Fft = () => {
                 />
               </Grid>
               <Grid item xs={9} display={'flex'} alignItems={'center'} justifyContent={'space-evenly'}>
-                <Chip color='info' label={`TIME RTC : ${metaData?.time_rtc}`} variant="outlined" />
-                <Chip color='info' label={`TIME PC : ${metaData?.time_pc}`} variant="outlined" />
-                <Chip color='info' label={`Battery : ${metaData?.battery}`} variant="outlined" />
-                <Chip color='info' label={`ODR : ${metaData?.odr}`} variant="outlined" />
-                <Chip color='info' label={`PC - RTC : ${metaData?.diff}`} variant="outlined" />
+                <Chip color='info' label={`TIME RTC : ${metaData?.time_rtc || 'Nill'}`} variant="outlined" />
+                <Chip color='info' label={`TIME PC : ${metaData?.time_pc || 'Nill'}`} variant="outlined" />
+                <Chip color='info' label={`Battery : ${metaData?.battery || 'Nill'}`} variant="outlined" />
+                <Chip color='info' label={`ODR : ${metaData?.odr || 'Nill'}`} variant="outlined" />
+                <Chip color='info' label={`PC - RTC : ${metaData?.diff || 'Nill'}`} variant="outlined" />
               </Grid>
             </Grid>
           </Toolbar>
