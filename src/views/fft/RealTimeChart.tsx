@@ -44,31 +44,27 @@ interface FftGraph {
 }
 interface Props {
   name: string;
-  data: { rawData: FftGraph[]; fft: FftGraph[] };
+  color: "red" | "green",
+  label: "Raw Data" | "FFT"
+  data: FftGraph[];
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
-const RealTimeChart: FC<Props> = ({ name, data }) => {
+const RealTimeChart: FC<Props> = ({ name, data , color , label }) => {
   const chartData = {
     // labels: label,
     datasets: [
       {
-        label: 'Raw Data',
-        data: data.rawData,
-        borderColor: 'red',
-      },
-      {
-        label: 'FFT',
-        data: data.fft,
-        borderColor: 'blue',
+        label: label,
+        data: data,
+        borderColor: color,
       },
     ],
   };
 
   return (
     <div>
-      {name}
-      <Line id={name} width={'100%'} height={'80%'} options={options} data={chartData} />
+      <Line id={name+label} width={'100%'} height={'80%'} options={options} data={chartData} />
     </div>
   );
 };

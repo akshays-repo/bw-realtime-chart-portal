@@ -21,6 +21,7 @@ const Item = styled(Paper)(({ theme }) => ({
   backgroundColor: theme.palette.mode === 'dark' ? '#1A2027' : '#fff',
   ...theme.typography.body2,
   padding: theme.spacing(1),
+  margin: theme.spacing(1),
   textAlign: 'center',
   color: theme.palette.text.secondary,
   height: '100%',
@@ -63,33 +64,35 @@ const Fft = () => {
     };
   }, []);
 
-  const handleUpdateRealTimeChartData = (data: SseResponse): void => {
-    setRealTimeGraph((prevRealTimeData) => {
-      const updatedRealTimeData = { ...prevRealTimeData };
-      const { name, fft_x, raw_data_x, fft_y, raw_data_y } = data;
+  const handleUpdateRealTimeChartData = (sseResponse: SseResponse[]): void => {
+    for (const data of sseResponse) {
+      setRealTimeGraph((prevRealTimeData) => {
+        const updatedRealTimeData = { ...prevRealTimeData };
+        const { name, fft_x, raw_data_x, fft_y, raw_data_y } = data;
 
-      const rowData: FftGraph[] = [];
-      const fft: FftGraph[] = [];
+        const rowData: FftGraph[] = [];
+        const fft: FftGraph[] = [];
 
-      for (let fftIndex = 0; fftIndex < fft_x.length; fftIndex++) {
-        fft.push({
-          x: fft_x[fftIndex],
-          y: fft_y[fftIndex],
-        });
-      }
+        for (let fftIndex = 0; fftIndex < fft_x.length; fftIndex++) {
+          fft.push({
+            x: fft_x[fftIndex],
+            y: fft_y[fftIndex],
+          });
+        }
 
-      for (let rowDataIndex = 0; rowDataIndex < raw_data_x.length; rowDataIndex++) {
-        rowData.push({
-          x: raw_data_x[rowDataIndex],
-          y: raw_data_y[rowDataIndex],
-        });
-      }
-      updatedRealTimeData[name] = {
-        rawData: rowData,
-        fft: fft,
-      };
-      return updatedRealTimeData;
-    });
+        for (let rowDataIndex = 0; rowDataIndex < raw_data_x.length; rowDataIndex++) {
+          rowData.push({
+            x: raw_data_x[rowDataIndex],
+            y: raw_data_y[rowDataIndex],
+          });
+        }
+        updatedRealTimeData[name] = {
+          rawData: rowData,
+          fft: fft,
+        };
+        return updatedRealTimeData;
+      });
+    }
   };
 
   const handleStartSSE = () => {
@@ -123,7 +126,7 @@ const Fft = () => {
       handleCloseMetaSSE();
     } else {
       handleStartSSE();
-      handleStartMetaSSE()
+      handleStartMetaSSE();
     }
   };
 
@@ -139,7 +142,6 @@ const Fft = () => {
     navigate('/sst');
   };
 
-  
   return (
     <div>
       <Box sx={{ flexGrow: 1, marginBottom: '1rem' }}>
@@ -172,11 +174,11 @@ const Fft = () => {
                 />
               </Grid>
               <Grid item xs={9} display={'flex'} alignItems={'center'} justifyContent={'space-evenly'}>
-                <Chip color='info' label={`TIME RTC : ${metaData?.time_rtc || 'Nill'}`} variant="outlined" />
-                <Chip color='info' label={`TIME PC : ${metaData?.time_pc || 'Nill'}`} variant="outlined" />
-                <Chip color='info' label={`Battery : ${metaData?.battery || 'Nill'}`} variant="outlined" />
-                <Chip color='info' label={`ODR : ${metaData?.odr || 'Nill'}`} variant="outlined" />
-                <Chip color='info' label={`PC - RTC : ${metaData?.diff || 'Nill'}`} variant="outlined" />
+                <Chip color="info" label={`TIME RTC : ${metaData?.time_rtc || 'Nill'}`} variant="outlined" />
+                <Chip color="info" label={`TIME PC : ${metaData?.time_pc || 'Nill'}`} variant="outlined" />
+                <Chip color="info" label={`Battery : ${metaData?.battery || 'Nill'}`} variant="outlined" />
+                <Chip color="info" label={`ODR : ${metaData?.odr || 'Nill'}`} variant="outlined" />
+                <Chip color="info" label={`PC - RTC : ${metaData?.diff || 'Nill'}`} variant="outlined" />
               </Grid>
             </Grid>
           </Toolbar>
@@ -189,15 +191,19 @@ const Fft = () => {
         </Grid>
       )}
 
-      <Grid container spacing={2} style={{ padding: '1rem' }} alignItems={'center'}>
-        {Object.keys(realTimeGraph).map((key) => (
-          <Grid key={key} item xs={6}>
-            <Item>
-              <RealtimeChart name={key} data={realTimeGraph[key]} />
-            </Item>
+      {Object.keys(realTimeGraph).map((key) => (
+        <Item>
+          <b>{key} </b>
+          <Grid container spacing={2} style={{ padding: '1rem' }} alignItems={'center'}>
+            <Grid key={key} item xs={6}>
+              <RealtimeChart name={key} data={realTimeGraph[key].rawData} label="Raw Data" color="red" />
+            </Grid>
+            <Grid key={key} item xs={6}>
+              <RealtimeChart name={key} data={realTimeGraph[key].fft} label="FFT" color="green" />
+            </Grid>
           </Grid>
-        ))}
-      </Grid>
+        </Item>
+      ))}
 
       <Menu
         id="basic-menu"
